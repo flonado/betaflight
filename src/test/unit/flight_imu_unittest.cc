@@ -46,7 +46,6 @@ extern "C" {
     #include "flight/mixer.h"
     #include "flight/pid.h"
     #include "flight/position.h"
-    #include "flight/position_estimator.h"
 
     #include "io/gps.h"
 
@@ -440,12 +439,4 @@ extern "C" {
     float getBaroAltitude(void) { return 3000.0f; }
     float gpsRescueGetImuYawCogGain(void) { return 1.0f; }
     float getRcDeflectionAbs(int) { return 0.0f; }
-
-    void positionEstimatorInit(void) { }
-    void positionEstimatorUpdate(void) { }
-    bool positionEstimatorIsValidZ(void) { return false; }
-    float positionEstimatorGetAltitudeCm(void) { return 0.0f; }
-    float positionEstimatorGetAltitudeDerivative(void) { return 0.0f; }
-    static positionEstimate3d_t stubEstimate = {};
-    const positionEstimate3d_t *positionEstimatorGetEstimate(void) { return &stubEstimate; }
 }

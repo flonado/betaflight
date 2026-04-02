@@ -23,12 +23,13 @@
 
 #include "drivers/dma_impl.h"
 
+#include "dma.h"
+
 bool dmaAllocate(dmaIdentifier_e identifier, resourceOwner_e owner, uint8_t resourceIndex)
 {
     const int index = DMA_IDENTIFIER_TO_INDEX(identifier);
-    const int handlerCount = dmaGetHandlerCount();
     // Prevent Wstringop-overflow warning
-    if (index < 0 || index >= handlerCount) {
+    if (index < 0 || index >= DMA_LAST_HANDLER) {
         return false;
     }
 
@@ -45,8 +46,7 @@ bool dmaAllocate(dmaIdentifier_e identifier, resourceOwner_e owner, uint8_t reso
 const resourceOwner_t *dmaGetOwner(dmaIdentifier_e identifier)
 {
     const int index = DMA_IDENTIFIER_TO_INDEX(identifier);
-    const int handlerCount = dmaGetHandlerCount();
-    if (index < 0 || index >= handlerCount) {
+    if (index < 0 || index >= DMA_LAST_HANDLER) {
         return &resourceOwnerInvalid;
     }
     return &dmaDescriptors[index].resourceOwner;
@@ -54,8 +54,7 @@ const resourceOwner_t *dmaGetOwner(dmaIdentifier_e identifier)
 
 dmaIdentifier_e dmaGetIdentifier(const dmaResource_t* channel)
 {
-    const int handlerCount = dmaGetHandlerCount();
-    for (int i = 0; i < handlerCount; i++) {
+    for (int i = 0; i < DMA_LAST_HANDLER; i++) {
         if (dmaDescriptors[i].ref == channel) {
             return i + 1;
         }

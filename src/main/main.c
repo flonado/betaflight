@@ -42,10 +42,6 @@
 
 #include "scheduler/scheduler.h"
 
-#ifdef CONFIG_IN_FILE
-#include "cli/cli.h"
-#endif
-
 void run(void);
 
 int main(int argc, char * argv[])
@@ -96,17 +92,6 @@ int main(int argc, char * argv[])
     multicoreExecuteBlocking(initPhase3);
 #else
     initPhase3();
-#endif
-
-#ifdef CONFIG_IN_FILE
-    {
-        const char *configFile = targetGetConfigFile();
-        if (configFile) {
-            cliProcessConfigFile(configFile);
-            // cliProcessConfigFile handles exit internally
-            return 0;
-        }
-    }
 #endif
 
     // Launch the scheduler

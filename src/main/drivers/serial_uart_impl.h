@@ -103,7 +103,7 @@ typedef struct uartPinDef_s {
 
 typedef struct uartHardware_s {
     serialPortIdentifier_e identifier;
-    usartResource_t *reg;
+    USART_TypeDef* reg;
 
 #ifdef USE_DMA
     dmaResource_t *txDMAResource;

@@ -21,13 +21,17 @@
 #pragma once
 
 #include "drivers/dma.h" // For dmaResource_t
-#include "drivers/serial_uart_types.h"
 #include "io/serial.h"   // TODO: maybe move serialPortIdentifier_e into separate header
 
 typedef struct uartPort_s {
     serialPort_t port;
 
 #ifdef USE_DMA
+#ifdef USE_HAL_DRIVER
+    DMA_HandleTypeDef rxDMAHandle;
+    DMA_HandleTypeDef txDMAHandle;
+#endif
+
     dmaResource_t *rxDMAResource;
     dmaResource_t *txDMAResource;
     uint32_t rxDMAChannel;
@@ -46,7 +50,11 @@ typedef struct uartPort_s {
     uint32_t rxDMAPeripheralBaseAddr;
 #endif // USE_DMA
 
-    usartResource_t *USARTx;
+#ifdef USE_HAL_DRIVER
+    // All USARTs can also be used as UART, and we use them only as UART.
+    UART_HandleTypeDef Handle;
+#endif
+    USART_TypeDef *USARTx;
     bool txDMAEmpty;
 
     bool (* checkUsartTxOutput)(struct uartPort_s *s);

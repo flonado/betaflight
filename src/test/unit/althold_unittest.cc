@@ -33,12 +33,10 @@ extern "C" {
     #include "fc/runtime_config.h"
 
     #include "flight/alt_hold.h"
-    #include "flight/autopilot_multirotor.h"
     #include "flight/failsafe.h"
     #include "flight/imu.h"
     #include "flight/pid.h"
     #include "flight/position.h"
-    #include "flight/position_estimator.h"
 
     #include "io/gps.h"
 
@@ -102,21 +100,6 @@ TEST(AltholdUnittest, altHoldTransitionsTestUnfinishedExitEnter)
     EXPECT_EQ(isAltHoldActive(), true);
 }
 
-TEST(AltholdUnittest, altHoldCapturesHoverThrottleWhenConfigZero)
-{
-    altHoldInit();
-    autopilotConfigMutable()->hoverThrottle = 0;
-    rcCommand[THROTTLE] = 1450.0f;
-
-    flightModeFlags |= ALT_HOLD_MODE;
-    updateAltHold(currentTimeUs);
-    EXPECT_EQ(autopilotGetEffectiveHoverThrottlePwm(), 1450);
-
-    flightModeFlags &= ~ALT_HOLD_MODE;
-    updateAltHold(currentTimeUs);
-    EXPECT_EQ(autopilotGetEffectiveHoverThrottlePwm(), AP_HOVER_THROTTLE_DEFAULT);
-}
-
 // STUBS
 
 extern "C" {
@@ -132,8 +115,6 @@ extern "C" {
 
     float getAltitudeCm(void) { return 0.0f; }
     float getAltitudeDerivative(void) { return 0.0f; }
-    float getAltitudeCmControl(void) { return 0.0f; }
-    float getAltitudeDerivativeControl(void) { return 0.0f; }
     float getCosTiltAngle(void) { return 0.0f; }
     float getGpsDataIntervalSeconds(void) { return 0.01f; }
     float getGpsDataFrequencyHz(void) { return 10.0f; }
@@ -145,12 +126,6 @@ extern "C" {
     }
 
     void GPS_distance2d(const gpsLocation_t* /*from*/, const gpsLocation_t* /*to*/, vector2_t* /*dest*/) { }
-
-    static positionEstimate3d_t stubEstimate = {};
-
-    const positionEstimate3d_t *positionEstimatorGetEstimate(void) { return &stubEstimate; }
-    void positionEstimatorEnableXY(bool /*enable*/) { }
-    bool positionEstimatorIsValidXY(void) { return false; }
 
     void parseRcChannels(const char *input, rxConfig_t *rxConfig) {
         UNUSED(input);

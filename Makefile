@@ -89,10 +89,6 @@ endif
 # some targets use parallel build by default
 # MAKEFLAGS is valid only inside target, do not use this at parse phase
 DEFAULT_PARALLEL_JOBS 	:=    # all jobs in parallel (for backward compatibility)
-# MinGW's make requires a numeric argument for -j; detect CPU count via nproc
-ifeq ($(MINGW),1)
-  DEFAULT_PARALLEL_JOBS := $(shell nproc 2>/dev/null || echo 4)
-endif
 MAKE_PARALLEL 		     = $(if $(filter -j%, $(MAKEFLAGS)),$(EMPTY),-j$(DEFAULT_PARALLEL_JOBS))
 
 # pre-build sanity checks
@@ -103,7 +99,7 @@ PLATFORMS        := $(sort $(notdir $(patsubst /%,%, $(wildcard $(PLATFORM_DIR)/
 BASE_TARGETS     := $(sort $(notdir $(patsubst %/,%,$(dir $(wildcard $(PLATFORM_DIR)/*/target/*/target.mk)))))
 
 # configure some directories that are relative to wherever ROOT_DIR is located
-TOOLS_DIR  ?= $(ROOT_DIR)/tools
+TOOLS_DIR  ?= $(ROOT)/tools
 DL_DIR     := $(ROOT)/downloads
 CONFIG_DIR ?= $(BETAFLIGHT_CONFIG)
 ifeq ($(CONFIG_DIR),)
@@ -170,10 +166,8 @@ include $(TARGET_DIR)/target.mk
 endif
 
 REVISION := norevision
-ifneq ($(wildcard .git/),)
 ifeq ($(shell git diff --shortstat),)
 REVISION := $(shell git rev-parse --short=9 HEAD)
-endif
 endif
 
 LD_FLAGS        :=
@@ -231,9 +225,6 @@ SPEED_OPTIMISED_SRC :=
 SIZE_OPTIMISED_SRC  :=
 
 include $(TARGET_PLATFORM_DIR)/mk/$(TARGET_MCU_FAMILY).mk
-
-# Validate the platform toolchain is available
-include $(MAKE_SCRIPT_DIR)/tools_check.mk
 
 # Configure default flash sizes for the targets (largest size specified gets hit first) if flash not specified already.
 ifeq ($(TARGET_FLASH_SIZE),)
@@ -510,10 +501,9 @@ $(TARGET_EXE): $(TARGET_ELF)
 # Compile
 
 ## compile_file takes two arguments: (1) optimisation description string and (2) optimisation compiler flag
-## SRC_CFLAGS_<filename> can override CFLAGS per source file (e.g. to suppress vendor warnings)
 define compile_file
 	echo "%% ($(1)) $<" "$(STDOUT)" && \
-	$(CROSS_CC) -c -o $@ $(CFLAGS) $(SRC_CFLAGS_$(notdir $<)) $(2) $<
+	$(CROSS_CC) -c -o $@ $(CFLAGS) $(2) $<
 endef
 
 ## `paths` is a list of paths that will be replaced for checking of speed, and size optimised sources
@@ -689,8 +679,6 @@ ifeq ($(DEFAULT_OUTPUT),exe)
 	$(V1) $(MAKE) exe
 else ifeq ($(DEFAULT_OUTPUT),uf2)
 	$(V1) $(MAKE) uf2
-else ifeq ($(DEFAULT_OUTPUT),bin)
-	$(V1) $(MAKE) binary
 else
 	$(V1) $(MAKE) hex
 endif
@@ -810,7 +798,7 @@ $(TARGET_EF_HASH_FILE):
 	$(V1) touch $(TARGET_EF_HASH_FILE)
 
 # rebuild everything when makefile changes or the extra flags have changed
-$(TARGET_OBJS): $(TARGET_EF_HASH_FILE) Makefile $(TARGET_DIR)/target.mk $(wildcard make/*) $(CONFIG_FILE) | $(PLATFORM_SDK_STAMP)
+$(TARGET_OBJS): $(TARGET_EF_HASH_FILE) Makefile $(TARGET_DIR)/target.mk $(wildcard make/*) $(CONFIG_FILE)
 
 # include auto-generated dependencies
 -include $(TARGET_DEPS)

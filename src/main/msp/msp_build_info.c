@@ -35,7 +35,9 @@
 
 #include "msp/msp_build_info.h"
 
-static const uint16_t buildOptions[] = {
+void sbufWriteBuildInfoFlags(sbuf_t *dst)
+{
+    static const uint16_t options[] = {
 #ifdef USE_SERIALRX_CRSF
         BUILD_OPTION_SERIALRX_CRSF,
 #endif
@@ -183,17 +185,10 @@ static const uint16_t buildOptions[] = {
 #ifdef USE_PWM_OUTPUT
         BUILD_OPTION_PWM_OUTPUT,
 #endif
-};
+    };
 
-void sbufWriteBuildInfoFlags(sbuf_t *dst)
-{
-    for (unsigned i = 0; i < ARRAYLEN(buildOptions); i++) {
-        sbufWriteU16(dst, buildOptions[i]);
+    for (unsigned i = 0; i < ARRAYLEN(options); i++)
+    {
+        sbufWriteU16(dst, options[i]);
     }
-}
-
-const uint16_t *getBuildOptions(unsigned *count)
-{
-    *count = ARRAYLEN(buildOptions);
-    return buildOptions;
 }

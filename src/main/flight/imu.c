@@ -53,13 +53,13 @@
 #include "sensors/gyro.h"
 #include "sensors/sensors.h"
 
-#if ENABLE_SIMULATOR_MULTITHREAD
+#if defined(SIMULATOR_BUILD) && defined(SIMULATOR_MULTITHREAD)
 #include <stdio.h>
 #include <pthread.h>
 
 static pthread_mutex_t imuUpdateLock;
 
-#if ENABLE_SIMULATOR_IMU_SYNC
+#if defined(SIMULATOR_IMU_SYNC)
 static uint32_t imuDeltaT = 0;
 static bool imuUpdated = false;
 #endif
@@ -158,7 +158,7 @@ STATIC_UNIT_TESTED void imuComputeRotationMatrix(void)
     rMat.m[2][1] = 2.0f * (qP.yz - -qP.wx);
     rMat.m[2][2] = 1.0f - 2.0f * qP.xx - 2.0f * qP.yy;
 
-#if ENABLE_SIMULATOR && !defined(USE_IMU_CALC) && !defined(SET_IMU_FROM_EULER)
+#if defined(SIMULATOR_BUILD) && !defined(USE_IMU_CALC) && !defined(SET_IMU_FROM_EULER)
     rMat.m[1][0] = -2.0f * (qP.xy - -qP.wz);
     rMat.m[2][0] = -2.0f * (qP.xz + -qP.wy);
 #endif
@@ -176,8 +176,8 @@ void imuConfigure(uint16_t throttle_correction_angle, uint8_t throttle_correctio
     imuRuntimeConfig.imuDcmKi = imuConfig()->imu_dcm_ki / 10000.0f;
     // magnetic declination has negative sign (positive clockwise when seen from top)
     const float imuMagneticDeclinationRad = DEGREES_TO_RADIANS(imuConfig()->mag_declination / 10.0f);
-    sincosf_approx(imuMagneticDeclinationRad, &north_ef.y, &north_ef.x);
-    north_ef.y = -north_ef.y;
+    north_ef.x = cos_approx(imuMagneticDeclinationRad);
+    north_ef.y = -sin_approx(imuMagneticDeclinationRad);
 
     smallAngleCosZ = cos_approx(degreesToRadians(imuConfig()->small_angle));
 
@@ -191,7 +191,7 @@ void imuInit(void)
     canUseGPSHeading = false;
     imuComputeRotationMatrix();
 
-#if ENABLE_SIMULATOR_MULTITHREAD
+#if defined(SIMULATOR_BUILD) && defined(SIMULATOR_MULTITHREAD)
     if (pthread_mutex_init(&imuUpdateLock, NULL) != 0) {
         printf("Create imuUpdateLock error!\n");
     }
@@ -451,9 +451,7 @@ STATIC_UNIT_TESTED float imuCalcCourseErr(float courseOverGround)
 {
     // Compute COG heading unit vector in earth frame (ef) from scalar GPS CourseOverGround
     // Earth frame X is pointing north and sin/cos argument is anticlockwise. (|cog_ef| == 1.0)
-    float sin, cos;
-    sincosf_approx(-courseOverGround, &sin, &cos);
-    const vector2_t cog_ef = {.x = cos, .y = sin};
+    const vector2_t cog_ef = {.x = cos_approx(-courseOverGround), .y = sin_approx(-courseOverGround)};
 
     // Compute and normalise craft Earth frame heading vector from body X axis
     vector2_t heading_ef = {.x = rMat.m[X][X], .y = rMat.m[Y][X]};
@@ -564,14 +562,14 @@ static void imuComputeQuaternionFromRPY(quaternionProducts *quatProd, int16_t in
         initialYaw -= 3600;
     }
 
-    float cosRoll, sinRoll;
-    sincosf_approx(DECIDEGREES_TO_RADIANS(initialRoll) * 0.5f, &sinRoll, &cosRoll);
+    const float cosRoll = cos_approx(DECIDEGREES_TO_RADIANS(initialRoll) * 0.5f);
+    const float sinRoll = sin_approx(DECIDEGREES_TO_RADIANS(initialRoll) * 0.5f);
 
-    float cosPitch, sinPitch;
-    sincosf_approx(DECIDEGREES_TO_RADIANS(initialPitch) * 0.5f, &sinPitch, &cosPitch);
+    const float cosPitch = cos_approx(DECIDEGREES_TO_RADIANS(initialPitch) * 0.5f);
+    const float sinPitch = sin_approx(DECIDEGREES_TO_RADIANS(initialPitch) * 0.5f);
 
-    float cosYaw, sinYaw;
-    sincosf_approx(DECIDEGREES_TO_RADIANS(initialYaw) * 0.5f, &sinYaw, &cosYaw);
+    const float cosYaw = cos_approx(DECIDEGREES_TO_RADIANS(-initialYaw) * 0.5f);
+    const float sinYaw = sin_approx(DECIDEGREES_TO_RADIANS(-initialYaw) * 0.5f);
 
     const float q0 = cosRoll * cosPitch * cosYaw + sinRoll * sinPitch * sinYaw;
     const float q1 = sinRoll * cosPitch * cosYaw - cosRoll * sinPitch * sinYaw;
@@ -596,7 +594,7 @@ static void imuComputeQuaternionFromRPY(quaternionProducts *quatProd, int16_t in
 }
 #endif
 
-#if ENABLE_SIMULATOR && !defined(USE_IMU_CALC)
+#if defined(SIMULATOR_BUILD) && !defined(USE_IMU_CALC)
 static void imuCalculateEstimatedAttitude(timeUs_t currentTimeUs)
 {
     // unused static functions
@@ -640,7 +638,7 @@ static void updateGpsHeadingUsable(float groundspeedGain, float imuCourseError, 
 
 static void imuCalculateEstimatedAttitude(timeUs_t currentTimeUs)
 {
-#if ENABLE_SIMULATOR_IMU_SYNC
+#if defined(SIMULATOR_BUILD) && defined(SIMULATOR_IMU_SYNC)
     // Simulator-based timing
     //  printf("[imu]deltaT = %u, imuDeltaT = %u, currentTimeUs = %u, micros64_real = %lu\n", deltaT, imuDeltaT, currentTimeUs, micros64_real());
     const timeDelta_t deltaT = imuDeltaT;
@@ -737,9 +735,8 @@ static int calculateThrottleAngleCorrection(void)
         return 0;
     }
     int angle = lrintf(acos_approx(getCosTiltAngle()) * throttleAngleScale);
-    if (angle > 900) {
+    if (angle > 900)
         angle = 900;
-    }
     return lrintf(throttleAngleValue * sin_approx(angle / (900.0f * M_PIf / 2.0f)));
 }
 
@@ -747,7 +744,7 @@ void imuUpdateAttitude(timeUs_t currentTimeUs)
 {
     if (sensors(SENSOR_ACC) && acc.isAccelUpdatedAtLeastOnce) {
         IMU_LOCK;
-#if ENABLE_SIMULATOR_IMU_SYNC
+#if defined(SIMULATOR_BUILD) && defined(SIMULATOR_IMU_SYNC)
         if (imuUpdated == false) {
             IMU_UNLOCK;
             return;
@@ -799,7 +796,7 @@ void getQuaternion(quaternion_t *quat)
    quat->z = q.z;
 }
 
-#if ENABLE_SIMULATOR
+#ifdef SIMULATOR_BUILD
 void imuSetAttitudeRPY(float roll, float pitch, float yaw)
 {
     IMU_LOCK;
@@ -829,7 +826,7 @@ void imuSetAttitudeQuat(float w, float x, float y, float z)
     IMU_UNLOCK;
 }
 #endif
-#if ENABLE_SIMULATOR_IMU_SYNC
+#if defined(SIMULATOR_BUILD) && defined(SIMULATOR_IMU_SYNC)
 void imuSetHasNewData(uint32_t dt)
 {
     IMU_LOCK;
@@ -845,13 +842,11 @@ bool imuQuaternionHeadfreeOffsetSet(void)
 {
     if ((abs(attitude.values.roll) < 450)  && (abs(attitude.values.pitch) < 450)) {
         const float yaw = -atan2_approx((+2.0f * (qP.wz + qP.xy)), (+1.0f - 2.0f * (qP.yy + qP.zz)));
-        float sin, cos;
-        sincosf_approx(yaw/2, &sin, &cos);
 
-        offset.w = cos;
+        offset.w = cos_approx(yaw/2);
         offset.x = 0;
         offset.y = 0;
-        offset.z = sin;
+        offset.z = sin_approx(yaw/2);
 
         return true;
     } else {

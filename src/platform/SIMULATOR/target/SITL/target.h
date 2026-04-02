@@ -27,11 +27,10 @@
 #include <stdint.h>
 
 #include "common/utils.h"
-#include "drivers/serial_uart_types.h"
 
 #define TARGET_BOARD_IDENTIFIER "SITL"
 
-#define ENABLE_SIMULATOR_MULTITHREAD 1
+#define SIMULATOR_MULTITHREAD
 
 #define SYSTEM_HSE_MHZ 0
 #define DEFAULT_CPU_OVERCLOCK 1
@@ -49,10 +48,10 @@
 // disable this if wants to test AHRS algorithm
 #undef USE_IMU_CALC
 
-//#define ENABLE_SIMULATOR_ACC_SYNC 1
-//#define ENABLE_SIMULATOR_GYRO_SYNC 1
-//#define ENABLE_SIMULATOR_IMU_SYNC 1
-//#define ENABLE_SIMULATOR_GYROPID_SYNC 1
+//#define SIMULATOR_ACC_SYNC
+//#define SIMULATOR_GYRO_SYNC
+//#define SIMULATOR_IMU_SYNC
+//#define SIMULATOR_GYROPID_SYNC
 
 // file name to save config
 #define EEPROM_FILENAME "eeprom.bin"
@@ -113,7 +112,7 @@
 #undef USE_STACK_CHECK // I think SITL don't need this
 #undef USE_DASHBOARD
 #undef USE_TELEMETRY_LTM
-#undef USE_ADC
+#define USE_ADC
 #undef USE_VCP
 #undef USE_OSD
 #undef USE_RX_PPM
@@ -171,6 +170,31 @@ typedef enum
 typedef enum {RESET = 0, SET = !RESET} FlagStatus, ITStatus;
 typedef enum {DISABLE = 0, ENABLE = !DISABLE} FunctionalState;
 typedef enum {TEST_IRQ = 0 } IRQn_Type;
+typedef enum {
+    EXTI_Trigger_Rising = 0x08,
+    EXTI_Trigger_Falling = 0x0C,
+    EXTI_Trigger_Rising_Falling = 0x10
+} EXTITrigger_TypeDef;
+
+typedef struct
+{
+  uint32_t IDR;
+  uint32_t ODR;
+  uint32_t BSRR;
+  uint32_t BRR;
+} GPIO_TypeDef;
+
+#define GPIOA_BASE ((intptr_t)0x0001)
+
+typedef struct
+{
+    void* test;
+} TIM_TypeDef;
+
+typedef struct
+{
+    void* test;
+} TIM_OCInitTypeDef;
 
 typedef struct {
     void* test;
@@ -188,28 +212,37 @@ uint8_t DMA_GetFlagStatus(void *);
 void DMA_Cmd(DMA_Channel_TypeDef*, FunctionalState );
 void DMA_ClearFlag(uint32_t);
 
-struct spiResource_s;
-struct quadSpiResource_s;
-struct octoSpiResource_s;
+typedef struct
+{
+    void* test;
+} SPI_TypeDef;
 
-#define USART1 ((usartResource_t *)0x0001)
-#define USART2 ((usartResource_t *)0x0002)
-#define USART3 ((usartResource_t *)0x0003)
-#define USART4 ((usartResource_t *)0x0004)
-#define USART5 ((usartResource_t *)0x0005)
-#define USART6 ((usartResource_t *)0x0006)
-#define USART7 ((usartResource_t *)0x0007)
-#define USART8 ((usartResource_t *)0x0008)
+typedef struct
+{
+    void* test;
+} USART_TypeDef;
 
-#define UART4 ((usartResource_t *)0x0004)
-#define UART5 ((usartResource_t *)0x0005)
-#define UART7 ((usartResource_t *)0x0007)
-#define UART8 ((usartResource_t *)0x0008)
+#define USART1 ((USART_TypeDef *)0x0001)
+#define USART2 ((USART_TypeDef *)0x0002)
+#define USART3 ((USART_TypeDef *)0x0003)
+#define USART4 ((USART_TypeDef *)0x0004)
+#define USART5 ((USART_TypeDef *)0x0005)
+#define USART6 ((USART_TypeDef *)0x0006)
+#define USART7 ((USART_TypeDef *)0x0007)
+#define USART8 ((USART_TypeDef *)0x0008)
+
+#define UART4 ((USART_TypeDef *)0x0004)
+#define UART5 ((USART_TypeDef *)0x0005)
+#define UART7 ((USART_TypeDef *)0x0007)
+#define UART8 ((USART_TypeDef *)0x0008)
 
 #define SIMULATOR_MAX_RC_CHANNELS   16
 #define SIMULATOR_MAX_PWM_CHANNELS  16
 
-struct i2cResource_s;
+typedef struct
+{
+    void* test;
+} I2C_TypeDef;
 
 typedef struct {
     double timestamp;                   // in seconds
@@ -219,6 +252,9 @@ typedef struct {
     double velocity_xyz[3];             // m/s, earth frame. ENU (Ve, Vn, Vup) for virtual GPS mode (USE_VIRTUAL_GPS)!
     double position_xyz[3];             // meters, NED from origin. Longitude, Latitude, Altitude (ENU) for virtual GPS mode (USE_VIRTUAL_GPS)!
     double pressure;
+
+    double current;                      // in Amps
+    double vbat;
 } fdm_packet;
 
 typedef struct {
@@ -245,6 +281,3 @@ uint64_t millis64(void);
 int lockMainPID(void);
 
 int targetParseArgs(int argc, char * argv[]);
-#ifdef CONFIG_IN_FILE
-const char *targetGetConfigFile(void);
-#endif

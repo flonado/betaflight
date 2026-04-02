@@ -137,9 +137,6 @@
 #include "msp/msp_serial.h"
 
 #include "osd/osd.h"
-#if ENABLE_OSD_CUSTOM_TEXT
-#include "osd/osd_custom_text.h"
-#endif
 
 #include "pg/adc.h"
 #include "pg/beeper.h"
@@ -418,7 +415,9 @@ void initPhase1(void)
 #endif
     LED2_ON;
 
+#if !defined(SIMULATOR_BUILD)
     EXTIInit();
+#endif
 }
 
 void initPhase2(void)
@@ -488,29 +487,7 @@ void initPhase2(void)
 #endif
 
 #ifdef USE_OVERCLOCK
-    {
-        static const uint16_t overclockMhzTable[] = {
-            0, // OFF (use default clock)
-#if ENABLE_OVERCLOCK_108_MHZ
-            108,
-#endif
-#if ENABLE_OVERCLOCK_120_MHZ
-            120,
-#endif
-#if ENABLE_OVERCLOCK_192_MHZ
-            192,
-#endif
-#if ENABLE_OVERCLOCK_216_MHZ
-            216,
-#endif
-#if ENABLE_OVERCLOCK_240_MHZ
-            240,
-#endif
-        };
-        const uint8_t idx = systemConfig()->cpu_overclock;
-        const uint16_t mhz = (idx < ARRAYLEN(overclockMhzTable)) ? overclockMhzTable[idx] : 0;
-        OverclockRebootIfNecessary(mhz);
-    }
+    OverclockRebootIfNecessary(systemConfig()->cpu_overclock);
 #endif
 
     // Configure MCO output after config is stable
@@ -526,7 +503,7 @@ void initPhase2(void)
     busSwitchInit();
 #endif
 
-#if defined(USE_UART)
+#if defined(USE_UART) && !defined(SIMULATOR_BUILD)
     uartPinConfigure(serialPinConfig());
 #endif
 
@@ -562,7 +539,7 @@ void initPhase2(void)
     beeperInit(beeperDevConfig());
 #endif
 /* temp until PGs are implemented. */
-#if defined(USE_INVERTER)
+#if defined(USE_INVERTER) && !defined(SIMULATOR_BUILD)
     initInverters(serialPinConfig());
 #endif
 
@@ -583,9 +560,9 @@ void initPhase2(void)
         initFlags |= QUAD_OCTO_SPI_BUSSES_INIT_ATTEMPTED;
     }
 
-#if ENABLE_SDIO_INIT && defined(USE_SDCARD_SDIO) && !defined(CONFIG_IN_SDCARD)
+#if defined(USE_SDCARD_SDIO) && !defined(CONFIG_IN_SDCARD) && PLATFORM_TRAIT_SDIO_INIT
     sdioPinConfigure();
-    sdioInitialize();
+    SDIO_GPIO_Init();
 #endif
 }
 
@@ -771,10 +748,6 @@ void initPhase3(void)
         gpsLapTimerInit();
 #endif // USE_GPS_LAP_TIMER
     }
-#endif
-
-#if ENABLE_OSD_CUSTOM_TEXT
-    osdCustomTextInit();
 #endif
 
 #ifdef USE_LED_STRIP
